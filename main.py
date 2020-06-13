@@ -1,5 +1,6 @@
 import os
 import random
+import math
 import time
 import keyboard
 import numpy as np
@@ -56,13 +57,14 @@ class map:
         self.size = size
         self.snakeBody = []
         self.berryPos = None
+        self.boundPoint = [(0, 0), (0, size-1), (size-1, size-1), (size-1, 0)]
 
     def clear(self):
         self.map = np.zeros((self.size, self.size), dtype=np.int)
         return None
 
-    def setBerry(self,map):
-        self.berryPos = dropBerry(map)
+    def setBerry(self):
+        self.berryPos = dropBerry(self.map, self.boundPoint)
         return None
 
     def snakeBodyUpdate(self, snakeLength):
@@ -75,15 +77,16 @@ class map:
 def initGame(size):
     mapInit = map(size)
     snakeInit = snake(size)
-    mapInit.setBerry(mapInit.map)
+    mapInit.setBerry()
     return mapInit, snakeInit
 
 
-def dropBerry(map):
-    size = map.shape
+def dropBerry(map, boundPoint):
+    boundTLX, boundTLY = boundPoint[0]
+    boundBRX, boundBRY = boundPoint[2]
     while(True):
-        xPick = random.randint(0, size[0] - 1)
-        yPick = random.randint(0, size[1] - 1)
+        xPick = random.randint(boundTLX+1, boundBRX-1)
+        yPick = random.randint(boundTLY+1, boundBRY-1)
         if (map[xPick][yPick] == 0):
             return (xPick, yPick)
 
@@ -95,25 +98,94 @@ def keyFunc(key):
     return None
 
 
-def distanceUpdate(map, snake):
-    snake.distance = np.zeros(4)  # [180 to wall, 0 to wall, 90 to wall, 270 to wall]
-    snake.distance[0] = snake.position[1] - 0
-    snake.distance[1] = map.size - 1 - snake.position[1]
-    snake.distance[2] = snake.position[0] - 0
-    snake.distance[3] = map.size - 1 - snake.position[0]
+def point2Line(p11, p12, p21, p22):
+    x1, y1 = p11
+    x2, y2 = p12
+    x3, y3 = p21
+    x4, y4 = p22
+    #print(p11 ,p12, p21, p22)
+    denominator = ((x1-x2)*(y3-y4))-((y1-y2)*(x3-x4))
+    if (denominator == 0):
+        return None
+    else:
+        t = (((x1-x3)*(y3-y4))-((y1-y3)*(x3-x4)))/denominator
+        u = -1 * ((((x1-x2)*(y1-y3))-((y1-y2)*(x1-x3)))/denominator)
+        if t>=0 and u>=0 and u<=1:
+            return (x3+u*(x4-x3), y3+u*(y4-y3))
     return None
 
+
+def pointInLine():
+    return None
+
+
+def calDis(p1, p2):
+    xp1, yp1 = p1
+    xp2, yp2 = p2
+    return math.sqrt(((xp2-xp1)**2) + ((yp2-yp1)**2))
+
+
+def distanceUpdate(map, snake):
+    sHead = snake.position
+    bPoint = map.boundPoint
+    disArr = np.zeros(8)
+    # print("Check45->{}".format(tempPoint))
+    tempPoint = point2Line(sHead, (sHead[0], sHead[1] + 1), bPoint[1], bPoint[2])  # 0deg
+    disArr[0] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[1], bPoint[2])  # 45deg
+    if tempPoint == None:
+        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[0], bPoint[1])  # 45deg
+    #print("Check45->{}".format(tempPoint))
+    disArr[1] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1]), bPoint[0], bPoint[1])  # 90deg
+    disArr[2] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[1])  # 135deg
+    if tempPoint == None:
+        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[3])  # 135deg
+    #print("Check135->{}".format(tempPoint))
+    disArr[3] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0], sHead[1] - 1), bPoint[0], bPoint[3])  # 180deg
+    disArr[4] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[0], bPoint[3])  # 225deg
+    if tempPoint == None:
+        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[2], bPoint[3])  # 225deg
+    #print("Check225->{}".format(tempPoint))
+    disArr[5] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1]), bPoint[2], bPoint[3])  # 270deg
+    disArr[6] = calDis(sHead, tempPoint)
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[2], bPoint[3])  # 315deg
+    if tempPoint == None:
+        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[1], bPoint[2])  # 315deg
+    #print("Check315->{}".format(tempPoint))
+    disArr[7] = calDis(sHead, tempPoint)
+    snake.distance = disArr
+    return None
+
+
+def lineLineIntersect():
+    return None
+
+
+def checkCollision(map, snake):
+    snakeX, snakeY = snake.position
+    boundTLX, boundTLY = map.boundPoint[0]
+    boundBRX, boundBRY = map.boundPoint[2]
+    if (snake.position in map.snakeBody[:-1]) or (snakeX <= boundTLX) or (snakeX >= boundBRX) or (snakeY <= boundTLY) or (snakeY >= boundBRY):
+        return True
+    else:
+        return False
 
 
 def mapUpdate(map, snake):
     if (snake.position == map.berryPos):
         snake.scoreIncrease(1)
-        map.setBerry(map.map)
+        map.setBerry()
     snake.move(map.map.shape)
-    if (snake.position in map.snakeBody[:-1]) or (snake.position[0] < 0) or (snake.position[0] >= map.size) or (snake.position[1] < 0) or (snake.position[1] >= map.size):
+    if checkCollision(map, snake):
+        print("*****BOOM*****")
         return False
-    distanceUpdate(map, snake)
     map.clear()
+    distanceUpdate(map, snake)
     map.map[map.berryPos] = 1
     map.snakeBody.append(snake.position)
     map.snakeBodyUpdate(snakeLength=snake.length)
