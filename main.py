@@ -58,9 +58,16 @@ class map:
         self.snakeBody = []
         self.berryPos = None
         self.boundPoint = [(0, 0), (0, size-1), (size-1, size-1), (size-1, 0)]
+        self.clear()
 
     def clear(self):
         self.map = np.zeros((self.size, self.size), dtype=np.int)
+        for yIdx in range(self.size):
+            self.map[0][yIdx] = 3
+            self.map[self.size-1][yIdx] = 3
+        for xIdx in range(self.size):
+            self.map[xIdx][0] = 3
+            self.map[xIdx][self.size-1] = 3
         return None
 
     def setBerry(self):
@@ -115,9 +122,14 @@ def point2Line(p11, p12, p21, p22):
     return None
 
 
-def pointInLine():
-    return None
-
+def pointInLine(p11, p12, p2):
+    d1 = calDis(p11, p2)
+    d2 = calDis(p12, p2)
+    d3 = calDis(p11, p12)
+    if(d1 + d2 == d3):
+        return d1
+    else:
+        return 0
 
 def calDis(p1, p2):
     xp1, yp1 = p1
@@ -128,41 +140,100 @@ def calDis(p1, p2):
 def distanceUpdate(map, snake):
     sHead = snake.position
     bPoint = map.boundPoint
-    disArr = np.zeros(8)
+    sBody = np.flip(map.snakeBody[:-1], axis=0)
+    #np.set_printoptions(precision=3)
+    disArr = np.zeros((3,8))
     # print("Check45->{}".format(tempPoint))
-    tempPoint = point2Line(sHead, (sHead[0], sHead[1] + 1), bPoint[1], bPoint[2])  # 0deg
-    disArr[0] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[1], bPoint[2])  # 45deg
+
+    # 0deg
+    tempPoint = point2Line(sHead, (sHead[0], sHead[1] + 1), bPoint[1], bPoint[2])
+    disArr[0][0] = calDis(sHead, tempPoint)
+    disArr[1][0] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][0] = tempDis
+            break
+
+    # 45deg
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[1], bPoint[2])
     if tempPoint == None:
-        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[0], bPoint[1])  # 45deg
-    #print("Check45->{}".format(tempPoint))
-    disArr[1] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1]), bPoint[0], bPoint[1])  # 90deg
-    disArr[2] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[1])  # 135deg
+        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] + 1), bPoint[0], bPoint[1])
+    disArr[0][1] = calDis(sHead, tempPoint)
+    disArr[1][1] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][1] = tempDis
+            break
+
+    # 90deg
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1]), bPoint[0], bPoint[1])
+    disArr[0][2] = calDis(sHead, tempPoint)
+    disArr[1][2] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][2] = tempDis
+            break
+
+    # 135deg
+    tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[1])
     if tempPoint == None:
-        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[3])  # 135deg
-    #print("Check135->{}".format(tempPoint))
-    disArr[3] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0], sHead[1] - 1), bPoint[0], bPoint[3])  # 180deg
-    disArr[4] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[0], bPoint[3])  # 225deg
+        tempPoint = point2Line(sHead, (sHead[0] - 1, sHead[1] - 1), bPoint[0], bPoint[3])
+    disArr[0][3] = calDis(sHead, tempPoint)
+    disArr[1][3] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][3] = tempDis
+            break
+
+    # 180deg
+    tempPoint = point2Line(sHead, (sHead[0], sHead[1] - 1), bPoint[0], bPoint[3])
+    disArr[0][4] = calDis(sHead, tempPoint)
+    disArr[1][4] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][4] = tempDis
+            break
+
+    # 225deg
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[0], bPoint[3])
     if tempPoint == None:
-        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[2], bPoint[3])  # 225deg
-    #print("Check225->{}".format(tempPoint))
-    disArr[5] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1]), bPoint[2], bPoint[3])  # 270deg
-    disArr[6] = calDis(sHead, tempPoint)
-    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[2], bPoint[3])  # 315deg
+        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] - 1), bPoint[2], bPoint[3])
+    disArr[0][5] = calDis(sHead, tempPoint)
+    disArr[1][5] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][5] = tempDis
+            break
+
+    # 270deg
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1]), bPoint[2], bPoint[3])
+    disArr[0][6] = calDis(sHead, tempPoint)
+    disArr[1][6] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][6] = tempDis
+            break
+
+    # 315deg
+    tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[2], bPoint[3])
     if tempPoint == None:
-        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[1], bPoint[2])  # 315deg
-    #print("Check315->{}".format(tempPoint))
-    disArr[7] = calDis(sHead, tempPoint)
+        tempPoint = point2Line(sHead, (sHead[0] + 1, sHead[1] + 1), bPoint[1], bPoint[2])
+    disArr[0][7] = calDis(sHead, tempPoint)
+    disArr[1][7] = pointInLine(sHead, tempPoint, map.berryPos)
+    for idx in sBody:
+        tempDis = pointInLine(sHead, tempPoint, idx)
+        if (tempDis != 0):
+            disArr[2][7] = tempDis
+            break
+
     snake.distance = disArr
-    return None
-
-
-def lineLineIntersect():
     return None
 
 
@@ -190,7 +261,7 @@ def mapUpdate(map, snake):
     map.snakeBody.append(snake.position)
     map.snakeBodyUpdate(snakeLength=snake.length)
     for idxBody in map.snakeBody:
-        map.map[idxBody] = -1
+        map.map[idxBody] = 2
     return True
 
 
@@ -198,7 +269,6 @@ def drawMap(map, fps, snake):
     os.system("cls")
     print(f"{fps} frames/second. Score: {snake.score}.")
     print(map.map)
-    print(snake.distance)
     return None
 
 
@@ -214,7 +284,7 @@ def main(mapC, snakeC, Alive):
 
 if __name__ == "__main__":
     Alive = False
-    boardSize = 10
+    boardSize = 20
 
     while(True):
         if(Alive):
